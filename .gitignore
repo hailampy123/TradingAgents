@@ -221,3 +221,9 @@ __marimo__/
 # Enterprise env file (secrets) and generated run reports
 .env.enterprise
 reports/
+
+# uv lockfile (not tracked in this repo)
+uv.lock
+
+# Serena MCP tool state
+.serena/
