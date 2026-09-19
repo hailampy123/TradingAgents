@@ -1,4 +1,4 @@
-# TradingAgents — Architecture & Codebase Guide
+# TradingAgents — Architecture &amp; Codebase Guide
 
 A map of how the framework is put together: the layers, the agent pipeline,
 the data plane, the LLM abstraction, and the memory loop. Diagrams are
@@ -14,8 +14,8 @@ data, two **researchers** debate bull vs. bear, a **trader** drafts a
 proposal, a three-way **risk team** stress-tests it, and a **portfolio
 manager** issues the final call. The whole team is wired as a single
 [LangGraph](https://langchain-ai.github.io/langgraph/) state machine. Each run
-also feeds a persistent **memory log** so later runs learn from the realized
-outcome of earlier ones.
+also feeds a persistent **memory log** so later runs learn from the realized  
+outcome of earlier ones
 
 ---
 
@@ -56,15 +56,17 @@ flowchart TB
   AG -.uses.-> LLM
 ```
 
-| Layer | Where | Responsibility |
-|---|---|---|
-| Entry points | `cli/`, `main.py` | Collect inputs (ticker, date, models, depth); stream progress |
-| Orchestration | `tradingagents/graph/` | Build & run the LangGraph, route debates, manage checkpoints |
-| Agent layer | `tradingagents/agents/` | The actual LLM nodes and their prompts/tools |
-| LLM plane | `tradingagents/llm_clients/` | One interface over OpenAI, Anthropic, Google, Bedrock, … |
-| Data plane | `tradingagents/dataflows/` | Fetch prices, fundamentals, news, macro; vendor routing |
-| Memory | `agents/utils/memory.py` + `graph/reflection.py` | Persist decisions, reflect on outcomes, re-inject lessons |
-| Reporting | `reporting.py` | Write the on-disk markdown report tree |
+
+| Layer         | Where                                            | Responsibility                                                   |
+| ------------- | ------------------------------------------------ | ---------------------------------------------------------------- |
+| Entry points  | `cli/`, `main.py`                                | Collect inputs (ticker, date, models, depth); stream progress    |
+| Orchestration | `tradingagents/graph/`                           | Build &amp; run the LangGraph, route debates, manage checkpoints |
+| Agent layer   | `tradingagents/agents/`                          | The actual LLM nodes and their prompts/tools                     |
+| LLM plane     | `tradingagents/llm_clients/`                     | One interface over OpenAI, Anthropic, Google, Bedrock, …         |
+| Data plane    | `tradingagents/dataflows/`                       | Fetch prices, fundamentals, news, macro; vendor routing          |
+| Memory        | `agents/utils/memory.py` + `graph/reflection.py` | Persist decisions, reflect on outcomes, re-inject lessons        |
+| Reporting     | `reporting.py`                                   | Write the on-disk markdown report tree                           |
+
 
 ---
 
@@ -110,15 +112,17 @@ flowchart TB
   NEU --> PM --> END(["END"])
 ```
 
-**Stage flow & control:**
+**Stage flow &amp; control:**
 
-| Stage | Nodes | Loop / stop condition | LLM tier |
-|---|---|---|---|
-| Analysts | Market, Sentiment, News, Fundamentals | Each runs its own ReAct tool loop, then reports | quick |
-| Researcher debate | Bull ⇄ Bear | stops at `count ≥ 2 × max_debate_rounds` (`conditional_logic.py:52`) | quick |
-| Synthesis | Research Manager → Trader | single pass each | deep / quick |
-| Risk debate | Aggressive → Conservative → Neutral | stops at `count ≥ 3 × max_risk_discuss_rounds` (`conditional_logic.py:63`) | quick |
-| Final | Portfolio Manager | single pass; only node that reads memory | deep |
+
+| Stage             | Nodes                                 | Loop / stop condition                                                      | LLM tier     |
+| ----------------- | ------------------------------------- | -------------------------------------------------------------------------- | ------------ |
+| Analysts          | Market, Sentiment, News, Fundamentals | Each runs its own ReAct tool loop, then reports                            | quick        |
+| Researcher debate | Bull ⇄ Bear                           | stops at `count ≥ 2 × max_debate_rounds` (`conditional_logic.py:52`)       | quick        |
+| Synthesis         | Research Manager → Trader             | single pass each                                                           | deep / quick |
+| Risk debate       | Aggressive → Conservative → Neutral   | stops at `count ≥ 3 × max_risk_discuss_rounds` (`conditional_logic.py:63`) | quick        |
+| Final             | Portfolio Manager                     | single pass; only node that reads memory                                   | deep         |
+
 
 > **quick vs deep** = the two models you pick (`quick_think_llm`,
 > `deep_think_llm`). Wiring is in `graph/setup.py`; only the two managers use
@@ -197,14 +201,16 @@ flowchart LR
   CFG -->|"reddit / stocktwits"| SOC["reddit.py · stocktwits.py"]
 ```
 
-| Category (config key) | Options | Default |
-|---|---|---|
-| `core_stock_apis` | yfinance, alpha_vantage | yfinance |
-| `technical_indicators` | yfinance, alpha_vantage | yfinance |
-| `fundamental_data` | yfinance, alpha_vantage | yfinance |
-| `news_data` | yfinance, alpha_vantage | yfinance |
-| `macro_data` | fred | fred |
-| `prediction_markets` | polymarket | polymarket |
+
+| Category (config key)  | Options                 | Default    |
+| ---------------------- | ----------------------- | ---------- |
+| `core_stock_apis`      | yfinance, alpha_vantage | yfinance   |
+| `technical_indicators` | yfinance, alpha_vantage | yfinance   |
+| `fundamental_data`     | yfinance, alpha_vantage | yfinance   |
+| `news_data`            | yfinance, alpha_vantage | yfinance   |
+| `macro_data`           | fred                    | fred       |
+| `prediction_markets`   | polymarket              | polymarket |
+
 
 Set per-category in `data_vendors` or override a single tool in `tool_vendors`
 (`default_config.py`). Fallback: list several, e.g. `"yfinance,alpha_vantage"`.
@@ -213,29 +219,31 @@ vendor you didn't pick (#988/#289). `macro_data` and `prediction_markets` are
 in `OPTIONAL_CATEGORIES`, so a failure there degrades gracefully; prices,
 fundamentals, and news raise loudly.
 
-### 5a. Sources & keys
+### 5a. Sources &amp; keys
 
-| Data | Tool(s) | Vendors | API key |
-|---|---|---|---|
-| Prices (OHLCV) | `get_stock_data` | yfinance, alpha_vantage | yfinance: none · AV: `ALPHA_VANTAGE_API_KEY` |
-| Technical indicators | `get_indicators` | yfinance (stockstats), alpha_vantage | same |
-| Fundamentals / statements | `get_fundamentals`, `get_balance_sheet`, `get_cashflow`, `get_income_statement` | yfinance, alpha_vantage | same |
-| Ticker & global news | `get_news`, `get_global_news` | yfinance, alpha_vantage | same |
-| Insider transactions | `get_insider_transactions` | alpha_vantage, yfinance | same |
-| Macro (CPI, rates, …) | `get_macro_indicators` | FRED | `FRED_API_KEY` |
-| Prediction markets | `get_prediction_markets` | Polymarket | none |
-| Social sentiment | pre-fetched by Sentiment Analyst | Reddit + StockTwits | none |
+
+| Data                      | Tool(s)                                                                         | Vendors                              | API key                                      |
+| ------------------------- | ------------------------------------------------------------------------------- | ------------------------------------ | -------------------------------------------- |
+| Prices (OHLCV)            | `get_stock_data`                                                                | yfinance, alpha_vantage              | yfinance: none · AV: `ALPHA_VANTAGE_API_KEY` |
+| Technical indicators      | `get_indicators`                                                                | yfinance (stockstats), alpha_vantage | same                                         |
+| Fundamentals / statements | `get_fundamentals`, `get_balance_sheet`, `get_cashflow`, `get_income_statement` | yfinance, alpha_vantage              | same                                         |
+| Ticker &amp; global news  | `get_news`, `get_global_news`                                                   | yfinance, alpha_vantage              | same                                         |
+| Insider transactions      | `get_insider_transactions`                                                      | alpha_vantage, yfinance              | same                                         |
+| Macro (CPI, rates, …)     | `get_macro_indicators`                                                          | FRED                                 | `FRED_API_KEY`                               |
+| Prediction markets        | `get_prediction_markets`                                                        | Polymarket                           | none                                         |
+| Social sentiment          | pre-fetched by Sentiment Analyst                                                | Reddit + StockTwits                  | none                                         |
+
 
 ### 5b. Freshness — how "latest" is pulled
 
 Two dates drive every fetch:
 
-- **`trade_date`** (analysis date) = a **look-ahead cap**. After fetching, rows
-  are filtered to `Date <= curr_date` (`stockstats_utils.py:215`), so a
-  backtest never sees future prices.
+- `**trade_date**` (analysis date) = a **look-ahead cap**. After fetching, rows
+are filtered to `Date <= curr_date` (`stockstats_utils.py:215`), so a
+backtest never sees future prices.
 - **"today"** = when `trade_date` is the current day, the fetch reaches the
-  live bar. Yahoo publishes a *partial* daily candle during market hours whose
-  `Close` is not final — so a same-day cache must expire.
+live bar. Yahoo publishes a *partial* daily candle during market hours whose
+`Close` is not final — so a same-day cache must expire.
 
 ```mermaid
 flowchart TB
@@ -252,36 +260,38 @@ flowchart TB
 ```
 
 - Same-day TTL = **900 s** (`OHLCV_CACHE_TTL_SECONDS`); historical rows are
-  immutable and reused forever.
+immutable and reused forever.
 - `end` is requested as **tomorrow** (yfinance `end` is exclusive) so today's
-  row is included (#986).
+row is included (#986).
 - A stale frame (newest row far older than `curr_date`) is rejected rather than
-  fed into indicators (#1021).
+fed into indicators (#1021).
 
-### 5c. Storage & caching
+### 5c. Storage &amp; caching
 
 **Only OHLCV price data is cached to disk.** News, fundamentals, macro,
 insider, social, and prediction-market data are **fetched live every run** —
 look-ahead is enforced by date-filtering the API response
 (`alpha_vantage_common.py:142`), not by a cache.
 
-| What | Cached? | Where | Invalidation |
-|---|---|---|---|
-| OHLCV prices | ✅ per-symbol CSV | `~/.tradingagents/cache/<SYM>-YFin-data-<start>-<end>.csv` | 15-min TTL same-day; empty/corrupt = miss → refetch |
-| News / fundamentals / macro / social | ❌ live | — | — |
-| Decision memory | ✅ append-only markdown | `~/.tradingagents/memory/trading_memory.md` | rotation by max-entries |
-| Checkpoints (opt-in) | ✅ SQLite | `~/.tradingagents/cache/checkpoints/<SYM>.db` | cleared on success |
+
+| What                                 | Cached?                | Where                                                      | Invalidation                                        |
+| ------------------------------------ | ---------------------- | ---------------------------------------------------------- | --------------------------------------------------- |
+| OHLCV prices                         | ✅ per-symbol CSV       | `~/.tradingagents/cache/<SYM>-YFin-data-<start>-<end>.csv` | 15-min TTL same-day; empty/corrupt = miss → refetch |
+| News / fundamentals / macro / social | ❌ live                 | —                                                          | —                                                   |
+| Decision memory                      | ✅ append-only markdown | `~/.tradingagents/memory/trading_memory.md`                | rotation by max-entries                             |
+| Checkpoints (opt-in)                 | ✅ SQLite               | `~/.tradingagents/cache/checkpoints/<SYM>.db`              | cleared on success                                  |
+
 
 - Cache root is `data_cache_dir`, overridable with `TRADINGAGENTS_CACHE_DIR`.
 - The OHLCV cache is a **fixed 5-year window per symbol**, so all date ranges
-  for one ticker share one file.
+for one ticker share one file.
 - All symbols pass through `normalize_symbol` (broker/forex → Yahoo, e.g.
-  `XAUUSD → GC=F`) and `safe_ticker_component` (path-traversal hardening) before
-  touching the filesystem.
+`XAUUSD → GC=F`) and `safe_ticker_component` (path-traversal hardening) before
+touching the filesystem.
 - A failed price fetch never writes an empty frame, so the cache can't be
-  poisoned.
+poisoned.
 - Because non-price sources aren't cached, two runs minutes apart can see
-  different news/social content — the documented reproducibility caveat.
+different news/social content — the documented reproducibility caveat.
 
 ---
 
@@ -301,14 +311,14 @@ flowchart TB
 ```
 
 - Any OpenAI-compatible endpoint (vLLM, LM Studio, Ollama, custom relay) flows
-  through `OpenAIClient` — see `is_openai_compatible()`.
+through `OpenAIClient` — see `is_openai_compatible()`.
 - `model_catalog.py` / `capabilities.py` know which models support reasoning
-  effort, thinking level, temperature, etc.; `validators.py` warns on unknown
-  model IDs.
+effort, thinking level, temperature, etc.; `validators.py` warns on unknown
+model IDs.
 
 ---
 
-## 7. Memory & reflection loop
+## 7. Memory &amp; reflection loop
 
 The one part that spans **runs**. A decision is logged as `pending`, then the
 *next* run for the same ticker resolves it against realized returns, writes a
@@ -335,22 +345,24 @@ flowchart TB
 
 - **Producer:** `graph/reflection.py` (`Reflector`) — writes the lesson text.
 - **Store:** `agents/utils/memory.py` (`TradingMemoryLog`) — append-only
-  markdown, atomic writes, optional rotation.
+markdown, atomic writes, optional rotation.
 - **Consumer:** only the Portfolio Manager prompt reads `past_context`.
 - Realized-return math (`_fetch_returns`, `_resolve_benchmark`) lives in
-  `graph/trading_graph.py`; benchmark auto-selects by exchange suffix (SPY for
-  US, `^N225` for Tokyo, etc.).
+`graph/trading_graph.py`; benchmark auto-selects by exchange suffix (SPY for
+US, `^N225` for Tokyo, etc.).
 
 ---
 
-## 8. Persistence & recovery
+## 8. Persistence &amp; recovery
 
-| Concern | Mechanism | Location |
-|---|---|---|
-| Decision memory | append-only markdown log (always on) | `~/.tradingagents/memory/trading_memory.md` |
-| Crash resume | opt-in LangGraph SqliteSaver per ticker (`--checkpoint`) | `~/.tradingagents/cache/checkpoints/<TICKER>.db` |
-| Reports | markdown tree per run | `~/.tradingagents/logs/` (via `reporting.py`) |
-| Run state dump | full JSON state per run | `results_dir/<ticker>/TradingAgentsStrategy_logs/` |
+
+| Concern         | Mechanism                                                | Location                                           |
+| --------------- | -------------------------------------------------------- | -------------------------------------------------- |
+| Decision memory | append-only markdown log (always on)                     | `~/.tradingagents/memory/trading_memory.md`        |
+| Crash resume    | opt-in LangGraph SqliteSaver per ticker (`--checkpoint`) | `~/.tradingagents/cache/checkpoints/<TICKER>.db`   |
+| Reports         | markdown tree per run                                    | `~/.tradingagents/logs/` (via `reporting.py`)      |
+| Run state dump  | full JSON state per run                                  | `results_dir/<ticker>/TradingAgentsStrategy_logs/` |
+
 
 Checkpoint identity is keyed on ticker + date + **graph shape** (analyst
 selection, debate depths, asset type) so a resume never continues a
@@ -393,11 +405,13 @@ main.py                        # minimal programmatic example
 ## 10. Two mental models to keep
 
 1. **Nodes talk through state, not to each other.** An agent writes a field
-   (`market_report`, `investment_plan`, …); the next agent reads it. To trace
-   any behavior, follow the field, not a call stack.
-
+ (`market_report`, `investment_plan`, …); the next agent reads it. To trace
+ any behavior, follow the field, not a call stack.
 2. **Two config knobs shape a run:** the **graph shape** (which analysts,
-   debate/risk depth, asset type) and the **model tiers** (quick vs deep).
-   Everything else — providers, data vendors, language, temperature — is
-   swappable config in `default_config.py` and `TRADINGAGENTS_*` env vars.
-```
+ debate/risk depth, asset type) and the **model tiers** (quick vs deep).
+ Everything else — providers, data vendors, language, temperature — is
+ swappable config in `default_config.py` and `TRADINGAGENTS_*` env vars.
+  ```
+  
+  ```
+
